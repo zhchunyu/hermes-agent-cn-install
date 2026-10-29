@@ -8,6 +8,10 @@
 本仓库所有命令和镜像数据均在真实机器上执行并测量（Windows 11 25H2 / Build 26200 / AMD64，**2026-10-29**）。
 不是从博客抄的。
 
+> **已经过了 `git clone`，卡在后面？**
+> 看 [TROUBLESHOOTING.zh-CN.md](TROUBLESHOOTING.zh-CN.md)——智能应用控制拦 Python、
+> Electron 二进制下不来、打包工具链下不来，这三道坎都在 clone 之后才出现，README 这里不覆盖。
+
 ---
 
 ## 一、问题长什么样
@@ -69,7 +73,8 @@ git ls-remote --heads https://github.com/NousResearch/hermes-agent.git main
 |---|---|---|
 | `repository`（git clone） | 3–10 分钟 | 约 400 MB 工作树，界面会像卡死，**别关** |
 | `venv` + `python-deps` | 2–8 分钟 | 从 PyPI 拉依赖，见下面第 3 条 |
-| `products` + `setup` | 1–2 分钟 | 需要填模型 API key |
+| `products` | 5–20 分钟 | 首次要下 Electron（100+ MB）和打包工具链，见[坑 2](TROUBLESHOOTING.zh-CN.md#坑-2electron-二进制下不来) |
+| `setup` + `gateway` | 1–2 分钟 | 交互式，需要填模型 API key |
 
 ---
 
@@ -204,6 +209,21 @@ partial clone 不是普通 HTTP 文件下载。只缓存 release 附件、不做
 ```bash
 git config --global core.longpaths true
 ```
+
+### 10. clone 之后还有三道坎（本文不覆盖）
+
+上面前 9 条都发生在 clone 前后不久。真正折磨人的在后面：
+
+- **智能应用控制（SAC）拦 Python** —— 报 `0xc0e90002` 或
+  `ImportError: DLL load failed while importing unicodedata: 应用程序控制策略已阻止此文件。`。
+  它按构建日期和云端信誉判定，同一台机器上新构建的 Python 被拦、两个月前的放行。
+- **Electron 二进制下不来** —— `TypeError: fetch failed`，要配 `ELECTRON_MIRROR`。
+- **打包工具链下不来** —— electron-builder **故意忽略** `ELECTRON_MIRROR`，
+  得单独配 `ELECTRON_BUILDER_BINARIES_MIRROR`。
+
+三个坑的症状、确诊命令、能走通和走不通的解法，全在
+[**TROUBLESHOOTING.zh-CN.md**](TROUBLESHOOTING.zh-CN.md) 里，附两个脚本：
+`fix-sac-python.py`（换 Python 工具链并重算摘要）、`set-electron-mirror.ps1`（配两个镜像变量）。
 
 ---
 

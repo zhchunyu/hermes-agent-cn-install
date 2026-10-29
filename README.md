@@ -13,6 +13,11 @@ installer fails at the `git clone` stage.
 Every command and every mirror in this repository was executed and measured on a real machine
 (Windows 11 25H2, build 26200, AMD64) on **2026-10-29**. Nothing here is copied from a blog post.
 
+> **Already past `git clone` and stuck further along?**
+> Read [TROUBLESHOOTING.md](TROUBLESHOOTING.md). Smart App Control blocking Python, the Electron
+> binary failing to download, and electron-builder's toolchain failing to download all happen
+> *after* the clone — none of them are covered here.
+
 ---
 
 ## The problem
@@ -70,7 +75,8 @@ One-line helpers are in [`scripts/`](scripts/): `setup-git-mirror.ps1` (Windows)
 |---|---|---|
 | `repository` (git clone) | 3–10 min | ~400 MB working tree; the UI looks frozen — **do not close it** |
 | `venv` + `python-deps` | 2–8 min | downloads from PyPI; see [PyPI](#3-pypi-is-slow-or-times-out) below |
-| `products` + `setup` | 1–2 min | needs your model API key |
+| `products` | 5–20 min | first run downloads Electron (100+ MB) and the packaging toolchain — see [Wall 2](TROUBLESHOOTING.md#wall-2-the-electron-binary-will-not-download) |
+| `setup` + `gateway` | 1–2 min | interactive; needs your model API key |
 
 ---
 
@@ -212,6 +218,23 @@ checkout of deep paths fails:
 ```bash
 git config --global core.longpaths true
 ```
+
+### 10. Three more walls after the clone (not covered here)
+
+Items 1–9 above all happen around the clone. The ones that actually cost days come later:
+
+- **Smart App Control blocks Python** — surfaces as `exit code: 0xc0e90002` or
+  `ImportError: DLL load failed while importing unicodedata: 应用程序控制策略已阻止此文件。`
+  It judges by build date and cloud reputation, so on the same machine a brand-new Python build
+  is blocked while a two-month-old one loads fine.
+- **The Electron binary will not download** — `TypeError: fetch failed`; needs `ELECTRON_MIRROR`.
+- **The packaging toolchain will not download** — electron-builder **deliberately ignores**
+  `ELECTRON_MIRROR` and needs its own `ELECTRON_BUILDER_BINARIES_MIRROR`.
+
+Symptoms, diagnostic commands, and which fixes work versus which do not are all in
+[**TROUBLESHOOTING.md**](TROUBLESHOOTING.md), along with two scripts:
+`fix-sac-python.py` (swap the Python toolchain and recompute the digest) and
+`set-electron-mirror.ps1` (set both mirror variables).
 
 ---
 
